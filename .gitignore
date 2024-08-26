@@ -1,2 +1,5 @@
 /node_modules
 /typescript
+
+.env
+.encryptedKey.json

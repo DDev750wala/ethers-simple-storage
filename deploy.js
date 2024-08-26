@@ -1,22 +1,28 @@
 const ethers = require("ethers")
 const { readFileSync } = require("fs")
+const dotenv = require("dotenv")
+
+dotenv.config();
 
 async function main() {
     // http://127.0.0.1:7545
 
     // The provider provides the connection or the chance to us to connect to the dummy 
     // blockchain on our local computer
-    const provider = new ethers.providers.JsonRpcProvider("HTTP://172.21.208.1:7545");
+    const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 
     // The wallet variable is used to use our dummy wallet in which we use our account private key 
     // and provider
-    const wallet = new ethers.Wallet(
-        "0x97100acacbb7d49c148dcb821ffffedce463414c3f723fde3b279bae870dc73b",
-         provider
-    );
-
+    // const wallet = new ethers.Wallet(
+    //     process.env.PRIVATE_KEY,
+    //      provider
+    // );
     const abi = readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf-8");
     const binary = readFileSync("./SimpleStorage_sol_SimpleStorage.bin", "utf-8");
+    
+    const encryptedJson = readFileSync("./.encryptedKey.json", "utf-8");
+    let wallet = new ethers.Wallet.fromEncryptedJsonSync(encryptedJson, process.env.PASSWORD);
+    wallet = await wallet.connect(provider);
 
     // Now we have an abi and Binary which we can use to create contract factory,
     // in ethers, the contract factory is used to deploy contracts.
@@ -56,7 +62,7 @@ async function main() {
     const currentFavNumber = await contract.retrieve();
     console.log(`Current favorite number: ${currentFavNumber.toString()}`);
     
-    const transactionResponse = await contract.store("7");
+    const transactionResponse = await contract.store("750");
     const transactionRcpt = await transactionResponse.wait(1);
     const updatedFavNumber = await contract.retrieve();
     console.log(`Updated favorite number: ${updatedFavNumber.toString()}`);
