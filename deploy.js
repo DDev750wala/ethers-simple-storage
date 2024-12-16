@@ -13,25 +13,31 @@ async function main() {
 
     // The wallet variable is used to use our dummy wallet in which we use our account private key 
     // and provider
-    // const wallet = new ethers.Wallet(
-    //     process.env.PRIVATE_KEY,
-    //      provider
-    // );
+    const wallet = new ethers.Wallet(
+        process.env.PRIVATE_KEY,
+        provider
+    );
     const abi = readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf-8");
     const binary = readFileSync("./SimpleStorage_sol_SimpleStorage.bin", "utf-8");
-    
-    const encryptedJson = readFileSync("./.encryptedKey.json", "utf-8");
-    let wallet = new ethers.Wallet.fromEncryptedJsonSync(encryptedJson, process.env.PASSWORD);
-    wallet = await wallet.connect(provider);
+
+    // const encryptedJson = readFileSync(".encryptedKey.json", "utf-8");
+    // let wallet = new ethers.Wallet.fromEncryptedJsonSync(encryptedJson, process.env.PASSWORD);
+    // wallet = await wallet.connect(provider);
+    const balance = await wallet.getBalance();
+    console.log(`Wallet balance: ${ethers.utils.formatEther(balance)} ETH`);
+
 
     // Now we have an abi and Binary which we can use to create contract factory,
     // in ethers, the contract factory is used to deploy contracts.
     const contractFactory = new ethers.ContractFactory(abi, binary, wallet);
+    await contractFactory.deploy()
     console.log("deploying, please wait...!");
-
     // deploying our contract
-    const contract = await contractFactory.deploy();
-    const transactionReceipt = await contract.deployTransaction.wait(1);
+    const estimatedGasLimit = await provider.estimateGas(contractFactory.getDeployTransaction());
+    console.log(`The estimated gas limit is something around: ${estimatedGasLimit}`);
+    const contract = await contractFactory.deploy({ gasLimit: estimatedGasLimit });
+    await contract.deployTransaction.wait(1);
+    console.log(`CONTRACT ADDRESS: ${contract.address}`);
 
     // Deployment receipt and diployment transaction
     // You only get transaction receipt if you wait for a block confirmation. Otherwise you will get only deployment transaction.
@@ -61,12 +67,12 @@ async function main() {
 
     const currentFavNumber = await contract.retrieve();
     console.log(`Current favorite number: ${currentFavNumber.toString()}`);
-    
+
     const transactionResponse = await contract.store("750");
     const transactionRcpt = await transactionResponse.wait(1);
     const updatedFavNumber = await contract.retrieve();
     console.log(`Updated favorite number: ${updatedFavNumber.toString()}`);
-    
-}
+
+}       
 
 main()
